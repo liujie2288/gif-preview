@@ -1,32 +1,33 @@
 {
   "manifest_version": 3,
-  "name": "GIF 帧查看器",
-  "description": "逐帧查看 GIF 动图的工具",
+  "name": "GIF Viewer",
   "version": "1.0",
-  "icons": {
-    "128": "icons/icon128.png"
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "contextMenus",
+    "contextMenus.refresh"
+  ],
+  "background": {
+    "service_worker": "background.js"
   },
   "action": {
     "default_popup": "popup.html",
     "default_icon": "icons/icon128.png"
   },
-  "permissions": [
-    "activeTab",
-    "scripting",
-    "tabs"
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
+  "icons": {
+    "48": "icons/icon48.png"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "run_at": "document_end"
+      "js": ["content.js"]
     }
   ],
-  "web_accessible_resources": [{
-    "resources": ["viewer.html", "lib/*"],
-    "matches": ["<all_urls>"]
-  }]
+  "web_accessible_resources": [
+    {
+      "resources": ["viewer.html", "icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 } 
