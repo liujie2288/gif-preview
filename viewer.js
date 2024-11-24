@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 播速度控制
+  // 播度控制
   if (playbackSpeedSelect) {
     playbackSpeedSelect.addEventListener('change', (e) => {
       playbackSpeed = parseFloat(e.target.value);
@@ -124,6 +124,9 @@ document.addEventListener('DOMContentLoaded', () => {
     loadGif(decodeURIComponent(gifUrl));
   }
 
+  // 初始化控制栏位置
+  initControlsPosition();
+  
   // 添加控制区拖动功能
   initDraggableControls();
 });
@@ -442,7 +445,7 @@ function handleZoomWheel(e) {
     const mouseX = (e.clientX - rect.left) / currentZoom;
     const mouseY = (e.clientY - rect.top) / currentZoom;
     
-    // 根据滚轮方向决定缩放方向
+    // 根据轮方向决定缩放方向
     const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
     const newZoom = currentZoom * zoomFactor;
     
@@ -607,49 +610,98 @@ function updateFrameHighlight() {
     }
 }
 
+// 修改初始化控制栏位置的函数
+function initControlsPosition() {
+    const controls = document.querySelector('.player-controls');
+    const playerContainer = document.querySelector('.player-container');
+    
+    if (controls && playerContainer) {
+        // 重置之前可能设置的样式
+        controls.style.transform = 'translateX(-50%)';
+        controls.style.left = '50%';
+        controls.style.bottom = '20px';
+        
+        // 清除可能存在的绝对位置
+        controls.style.position = 'absolute';
+    }
+}
+
 function initDraggableControls() {
     const controls = document.querySelector('.player-controls');
+    const dragHandle = document.querySelector('.drag-handle');
     let isDragging = false;
-    let currentX;
-    let currentY;
-    let initialX;
-    let initialY;
-    let xOffset = 0;
-    let yOffset = 0;
+    let startX, startY;
+    let initialLeft, initialBottom;
 
-    controls.addEventListener('mousedown', dragStart);
+    dragHandle.addEventListener('mousedown', startDragging);
     document.addEventListener('mousemove', drag);
-    document.addEventListener('mouseup', dragEnd);
+    document.addEventListener('mouseup', stopDragging);
 
-    function dragStart(e) {
-        initialX = e.clientX - xOffset;
-        initialY = e.clientY - yOffset;
-
-        if (e.target === controls || e.target.classList.contains('drag-handle')) {
-            isDragging = true;
+    function startDragging(e) {
+        e.preventDefault();
+        
+        const controls = document.querySelector('.player-controls');
+        isDragging = true;
+        
+        // 获取当前控件的位置
+        const rect = controls.getBoundingClientRect();
+        
+        // 如果控件还在初始位置（居中）
+        if (controls.style.transform === 'translateX(-50%)') {
+            // 计算实际的左边距
+            const left = rect.left;
+            const bottom = window.innerHeight - rect.bottom;
+            
+            // 移除居中定位，切换到绝对定位
+            controls.style.transform = 'none';
+            controls.style.left = `${left}px`;
+            controls.style.bottom = `${bottom}px`;
+            
+            // 更新初始位置
+            initialLeft = left;
+            initialBottom = bottom;
+        } else {
+            initialLeft = parseInt(controls.style.left);
+            initialBottom = parseInt(controls.style.bottom);
         }
+        
+        // 记录起始鼠标位置
+        startX = e.clientX;
+        startY = e.clientY;
+        
+        // 添加拖动时的视觉反馈
+        dragHandle.style.background = 'rgba(255, 255, 255, 0.5)';
     }
 
     function drag(e) {
-        if (isDragging) {
-            e.preventDefault();
-            
-            currentX = e.clientX - initialX;
-            currentY = e.clientY - initialY;
-
-            xOffset = currentX;
-            yOffset = currentY;
-
-            // 移除transform: translateX(-50%)的影响
-            controls.style.transform = 'none';
-            controls.style.left = `${currentX}px`;
-            controls.style.bottom = `${-currentY}px`;
-        }
+        if (!isDragging) return;
+        
+        e.preventDefault();
+        
+        // 计算移动距离
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        
+        // 计算新位置
+        let newLeft = initialLeft + deltaX;
+        let newBottom = initialBottom - deltaY;
+        
+        // 限制范围
+        const maxLeft = window.innerWidth - controls.offsetWidth;
+        const maxBottom = window.innerHeight - controls.offsetHeight;
+        
+        newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+        newBottom = Math.max(0, Math.min(newBottom, maxBottom));
+        
+        // 应用新位置
+        controls.style.left = `${newLeft}px`;
+        controls.style.bottom = `${newBottom}px`;
     }
 
-    function dragEnd() {
-        initialX = currentX;
-        initialY = currentY;
-        isDragging = false;
+    function stopDragging() {
+        if (isDragging) {
+            isDragging = false;
+            dragHandle.style.background = 'rgba(255, 255, 255, 0.3)';
+        }
     }
 } 
