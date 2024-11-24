@@ -60,6 +60,19 @@
       max-width: 90%;
       margin: 0;
       z-index: 100;
+      cursor: move;
+    }
+    
+    .drag-handle {
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
+      cursor: move;
     }
     
     /* 帧列表区域 */
@@ -214,6 +227,7 @@
         max-width: 90%;
         margin: 0;
         z-index: 100;
+        cursor: move;
     }
     
     /* 控制按钮样式优化 */
@@ -321,6 +335,7 @@
       </div>
       
       <div class="player-controls">
+        <div class="drag-handle"></div>
         <div class="progress-container">
           <div class="progress-bar" id="progressBar">
             <div class="progress-fill" id="progressFill"></div>

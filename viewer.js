@@ -123,6 +123,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (gifUrl) {
     loadGif(decodeURIComponent(gifUrl));
   }
+
+  // 添加控制区拖动功能
+  initDraggableControls();
 });
 
 async function loadGif(url) {
@@ -178,6 +181,32 @@ function createFrameElement(frameData, index) {
     const frameDiv = document.createElement('div');
     frameDiv.className = 'frame-item';
     frameDiv.id = `frame-${index}`;
+    
+    // 修改点击事件处理
+    frameDiv.addEventListener('click', (e) => {
+        e.stopPropagation(); // 阻止事件冒泡
+        
+        // 更新当前帧索引
+        currentFrameIndex = index;
+        
+        // 更新播放器显示
+        updatePlayer();
+        
+        // 如果正在播放，暂停播放
+        if (isPlaying) {
+            const playBtn = document.getElementById('playerPlay');
+            const pauseBtn = document.getElementById('playerPause');
+            isPlaying = false;
+            if (playInterval) {
+                clearInterval(playInterval);
+            }
+            pauseBtn.style.display = 'none';
+            playBtn.style.display = 'inline-flex';
+        }
+        
+        // 高亮当前帧
+        updateFrameHighlight();
+    });
     
     // 添加帧号
     const frameNumber = document.createElement('div');
@@ -560,20 +589,67 @@ function updatePlayer() {
   }
 }
 
+// 优化帧高亮和滚动
 function updateFrameHighlight() {
-    // 移除所有帧的高亮
     document.querySelectorAll('.frame-item').forEach(item => {
         item.classList.remove('active');
     });
     
-    // 添加当前帧的高亮
     const currentFrame = document.getElementById(`frame-${currentFrameIndex}`);
     if (currentFrame) {
         currentFrame.classList.add('active');
-        // 平滑滚动到当前帧
-        currentFrame.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'nearest'
+        // 平滑滚动到当前帧，确保在视野中居中
+        currentFrame.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'center'
         });
+    }
+}
+
+function initDraggableControls() {
+    const controls = document.querySelector('.player-controls');
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
+
+    controls.addEventListener('mousedown', dragStart);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', dragEnd);
+
+    function dragStart(e) {
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+
+        if (e.target === controls || e.target.classList.contains('drag-handle')) {
+            isDragging = true;
+        }
+    }
+
+    function drag(e) {
+        if (isDragging) {
+            e.preventDefault();
+            
+            currentX = e.clientX - initialX;
+            currentY = e.clientY - initialY;
+
+            xOffset = currentX;
+            yOffset = currentY;
+
+            // 移除transform: translateX(-50%)的影响
+            controls.style.transform = 'none';
+            controls.style.left = `${currentX}px`;
+            controls.style.bottom = `${-currentY}px`;
+        }
+    }
+
+    function dragEnd() {
+        initialX = currentX;
+        initialY = currentY;
+        isDragging = false;
     }
 } 
