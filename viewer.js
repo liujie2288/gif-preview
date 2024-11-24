@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 播度控制
+  // 播放速度控制
   if (playbackSpeedSelect) {
     playbackSpeedSelect.addEventListener('change', (e) => {
       playbackSpeed = parseFloat(e.target.value);
@@ -263,26 +263,35 @@ function highlightCurrentFrame() {
 }
 
 function playFrames() {
-  if (playInterval) {
-    clearInterval(playInterval);
-  }
-  
-  const play = () => {
-    if (!isPlaying) return;
-    
-    if (currentFrameIndex >= gifData.frames.length - 1) {
-      currentFrameIndex = 0;
-    } else {
-      currentFrameIndex++;
+    // 清除现有的定时器
+    if (playInterval) {
+        clearTimeout(playInterval);
+        playInterval = null;
     }
     
-    updatePlayer();
+    const play = () => {
+        if (!isPlaying) return;
+        
+        // 更新当前帧
+        if (currentFrameIndex >= gifData.frames.length - 1) {
+            currentFrameIndex = 0;
+        } else {
+            currentFrameIndex++;
+        }
+        
+        updatePlayer();
+        
+        // 获取当前帧的延迟时间
+        const currentDelay = gifData.frames[currentFrameIndex].delay || baseDelay;
+        // 根据播放速度调整延迟时间
+        const adjustedDelay = Math.max(20, currentDelay / playbackSpeed); // 设置最小延迟为20ms
+        
+        // 设置下一帧的定时器
+        playInterval = setTimeout(play, adjustedDelay);
+    };
     
-    const delay = (gifData.frames[currentFrameIndex].delay || baseDelay) / playbackSpeed;
-    setTimeout(play, delay);
-  };
-  
-  play();
+    // 立即开始播放
+    play();
 }
 
 // 添加下载帧的功能
