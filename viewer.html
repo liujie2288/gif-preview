@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>GIF 帧分析</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+    }
+    
+    .layout-container {
+      display: flex;
+      gap: 30px;
+      padding-top: 20px;
+      height: 100vh;
+      box-sizing: border-box;
+    }
+    
+    .player-container {
+      position: fixed;
+      left: 20px;
+      top: 20px;
+      width: 600px;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      z-index: 100;
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+    }
+    
+    .player-canvas-wrapper {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      aspect-ratio: 16/9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 15px;
+      min-height: 300px;
+    }
+    
+    .player-canvas {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    
+    .frames-container {
+      margin-left: 660px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      padding: 20px;
+      padding-bottom: 100px;
+      height: calc(100vh - 40px);
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+    
+    .frames-container::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .frames-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+    
+    .frames-container::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+    
+    .frames-container::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+    
+    .button {
+      padding: 4px 8px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+    }
+    
+    .primary-button {
+      background: #4285f4;
+      color: white;
+    }
+    
+    .primary-button:hover {
+      background: #3367d6;
+      transform: translateY(-1px);
+    }
+    
+    .secondary-button {
+      background: #f1f3f4;
+      color: #3c4043;
+    }
+    
+    .secondary-button:hover {
+      background: #e8eaed;
+      transform: translateY(-1px);
+    }
+    
+    .control-buttons {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin: 4px 0;
+    }
+    
+    .progress-container {
+      margin: 4px 0;
+    }
+    
+    .progress-bar {
+      height: 4px;
+      background: #e0e0e0;
+      border-radius: 2px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: #4285f4;
+      border-radius: 3px;
+      transition: width 0.1s ease-out;
+    }
+    
+    .progress-hover {
+      position: absolute;
+      height: 100%;
+      background: rgba(66, 133, 244, 0.2);
+      pointer-events: none;
+    }
+    
+    .speed-control {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .speed-control select {
+      padding: 3px 6px;
+      border-radius: 6px;
+      border: 1px solid #dadce0;
+      background: #fff;
+      font-size: 12px;
+      color: #3c4043;
+      cursor: pointer;
+      outline: none;
+      height: 24px;
+    }
+    
+    .speed-control select:hover {
+      border-color: #4285f4;
+    }
+    
+    .player-info {
+      display: flex;
+      justify-content: space-between;
+      color: #5f6368;
+      font-size: 12px;
+      padding: 6px 8px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin-top: 4px;
+    }
+    
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .info-value {
+      color: #202124;
+      font-weight: 500;
+    }
+    
+    .frame-item {
+      flex: 0 0 200px;
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: all 0.2s ease;
+      border: 2px solid transparent;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .frame-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    
+    .frame-item.active {
+      border-color: #4285f4;
+      background: #f8f9fa;
+      box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+    }
+    
+    .frame-item canvas {
+      width: 100%;
+      height: 120px;
+      object-fit: contain;
+      background: #f5f5f5;
+      border-radius: 6px;
+      cursor: zoom-in;
+      margin-bottom: 10px;
+    }
+    
+    .frame-info {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #eee;
+      font-size: 13px;
+      color: #666;
+    }
+    
+    .frame-info-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+    
+    .frame-info-label {
+      color: #999;
+    }
+    
+    .frame-info-value {
+      color: #333;
+      font-weight: 500;
+    }
+    
+    .download-button {
+      margin-top: 12px;
+      padding: 8px;
+      font-size: 13px;
+      border-radius: 6px;
+    }
+    
+    .download-button:hover {
+      background: #2d8a46;
+      transform: translateY(-1px);
+    }
+    
+    .frame-number {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .modal.active {
+      display: flex;
+    }
+    
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      position: relative;
+      max-width: 90%;
+      max-height: 90vh;
+      overflow: auto;
+      cursor: zoom-in;
+    }
+    
+    .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+      background: none;
+      border: none;
+      padding: 5px;
+    }
+    
+    .modal-canvas {
+      max-width: none;
+      image-rendering: pixelated;
+      display: block;
+    }
+    
+    .zoom-controls {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+      background: white;
+      padding: 10px;
+      border-radius: 4px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    .frame-item canvas {
+      cursor: zoom-in;
+    }
+    
+    .frame-item {
+      position: relative;
+    }
+    
+    .frame-size {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 1px 3px;
+      border-radius: 2px;
+      font-size: 10px;
+    }
+    
+    .loading-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+    
+    .loading-content {
+      text-align: center;
+      padding: 20px;
+      border-radius: 8px;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      margin: 10px auto;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #4285f4;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      color: #666;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    
+    .preview-container {
+      position: fixed;
+      top: 60px;
+      right: 20px;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      z-index: 99;
+      width: 300px;
+    }
+    
+    .preview-title {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .preview-canvas {
+      width: 100%;
+      height: auto;
+      border: 1px solid #eee;
+      background: #f5f5f5;
+    }
+    
+    .preview-info {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .preview-info span {
+      color: #4285f4;
+      font-weight: bold;
+    }
+    
+    .preview-toggle {
+      cursor: pointer;
+      padding: 2px 6px;
+      background: #f1f1f1;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    
+    .preview-container.collapsed {
+      width: auto;
+      padding: 8px;
+    }
+    
+    .preview-container.collapsed .preview-content {
+      display: none;
+    }
+    
+    
+    .player-canvas {
+      width: 100%;
+      height: auto;
+      background: #f5f5f5;
+      border: 1px solid #eee;
+    }
+    
+    .player-controls {
+      margin-top: 8px;
+    }
+    
+    .player-buttons {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+   
+  
+
+    .progress-bar {
+      width: 100%;
+      height: 20px;
+      background: #f0f0f0;
+      border-radius: 10px;
+      margin: 10px 0;
+      position: relative;
+      cursor: pointer;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: #4285f4;
+      border-radius: 10px;
+      width: 0%;
+      transition: width 0.1s;
+    }
+    
+    .player-info {
+      display: flex;
+      justify-content: space-between;
+      color: #666;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    
+    /* 优化帧列表中的按钮样式 */
+    .download-button {
+        margin-top: 8px;
+        padding: 6px 8px;
+        font-size: 12px;
+        border-radius: 4px;
+        background: #f1f3f4;
+        color: #3c4043;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+    }
+    
+    .download-button:hover {
+        background: #e8eaed;
+        transform: translateY(-1px);
+    }
+    
+    /* 优化播放器控制区域的样式 */
+    .player-controls {
+        margin-top: 10px;
+    }
+    
+    /* .control-buttons {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        margin: 8px 0;
+    } */
+    
+    .progress-container {
+        margin: 8px 0;
+    }
+    
+    .player-info {
+        display: flex;
+        justify-content: space-between;
+        color: #5f6368;
+        font-size: 12px;
+        padding: 8px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        margin-top: 8px;
+    }
+    
+    /* 调整帧信息的样式 */
+    .frame-info {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #eee;
+        font-size: 12px;
+    }
+    
+    .frame-info-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+    }
+    
+    .zoom-hint {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        pointer-events: none;
+        opacity: 0.8;
+    }
+    
+    .modal-content::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    .modal-content::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    .modal-content::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+    
+    .modal-content::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+  </style>
+</head>
+<body>
+  <div id="loadingContainer" class="loading-container">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <div class="loading-text">正在分析 GIF 图片，请稍候...</div>
+    </div>
+  </div>
+  
+  <div class="layout-container">
+    <div class="player-container">
+      <div class="player-canvas-wrapper">
+        <canvas id="playerCanvas" class="player-canvas"></canvas>
+      </div>
+      
+      <div class="player-controls">
+        <div class="progress-container">
+          <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+            <div class="progress-hover"></div>
+          </div>
+        </div>
+        
+        <div class="control-buttons">
+          <button id="prev" class="button secondary-button">
+            <span>&#10094;</span>
+          </button>
+          <button id="playerPlay" class="button primary-button">
+            <span>▶</span> 播放
+          </button>
+          <button id="playerPause" class="button primary-button" style="display: none;">
+            <span>❚❚</span> 暂停
+          </button>
+          <button id="next" class="button secondary-button">
+            <span>&#10095;</span>
+          </button>
+          
+          <div class="speed-control">
+            <span>速度</span>
+            <select id="playbackSpeed">
+              <option value="0.25">0.25x</option>
+              <option value="0.5">0.5x</option>
+              <option value="1" selected>1x</option>
+              <option value="2">2x</option>
+              <option value="4">4x</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="player-info">
+          <div class="info-item">
+            帧: <span class="info-value"><span id="playerCurrentFrame">0</span>/<span id="playerTotalFrames">0</span></span>
+          </div>
+          <div class="info-item">
+            尺寸: <span class="info-value" id="playerSize">0x0</span>
+          </div>
+          <div class="info-item">
+            延迟: <span class="info-value" id="playerDelay">0ms</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="frames-container" id="framesContainer">
+      <!-- 帧将通过 JavaScript 动态添加到这里 -->
+    </div>
+  </div>
+
+  <div class="modal" id="zoomModal">
+    <div class="modal-content">
+      <button class="modal-close" id="modalClose">&times;</button>
+      <canvas id="zoomCanvas" class="modal-canvas"></canvas>
+      <div class="zoom-hint">使用鼠标滚轮进行缩放</div>
+      <div class="zoom-controls">
+        <button class="button" id="zoomIn">放大</button>
+        <button class="button" id="zoomOut">缩小</button>
+        <button class="button" id="zoomReset">重置</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="lib/libgif.js"></script>
+  <script src="lib/gif-parser.js"></script>
+  <script src="viewer.js"></script>
+</body>
+</html> 

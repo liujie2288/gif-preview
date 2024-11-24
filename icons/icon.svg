@@ -1,0 +1,16 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆 -->
+  <circle cx="64" cy="64" r="60" fill="#4285f4"/>
+  
+  <!-- 电影胶片效果 -->
+  <rect x="34" y="44" width="60" height="40" fill="white" rx="4"/>
+  <rect x="38" y="48" width="12" height="8" fill="#4285f4"/>
+  <rect x="58" y="48" width="12" height="8" fill="#4285f4"/>
+  <rect x="78" y="48" width="12" height="8" fill="#4285f4"/>
+  <rect x="38" y="72" width="12" height="8" fill="#4285f4"/>
+  <rect x="58" y="72" width="12" height="8" fill="#4285f4"/>
+  <rect x="78" y="72" width="12" height="8" fill="#4285f4"/>
+  
+  <!-- GIF 文字 -->
+  <text x="64" y="64" font-family="Arial Black" font-size="16" fill="#4285f4" text-anchor="middle" dominant-baseline="middle">GIF</text>
+</svg> 
