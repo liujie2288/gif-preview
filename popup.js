@@ -39,34 +39,6 @@ document.getElementById('analyze').addEventListener('click', async () => {
   }
 });
 
-document.getElementById('prev').addEventListener('click', () => {
-  if (gifData && currentFrameIndex > 0) {
-    currentFrameIndex--;
-    renderFrame();
-  }
-});
-
-document.getElementById('next').addEventListener('click', () => {
-  if (gifData && currentFrameIndex < gifData.frames.length - 1) {
-    currentFrameIndex++;
-    renderFrame();
-  }
-});
-
-document.getElementById('play').addEventListener('click', () => {
-  if (gifData && !isPlaying) {
-    isPlaying = true;
-    playFrames();
-  }
-});
-
-document.getElementById('pause').addEventListener('click', () => {
-  isPlaying = false;
-  if (playInterval) {
-    clearInterval(playInterval);
-  }
-});
-
 async function loadGif(url) {
   try {
     // 打开新标签页显示帧分析结果
@@ -79,39 +51,4 @@ async function loadGif(url) {
     console.error('加载 GIF 失败:', error);
     alert('加载 GIF 失败: ' + error.message);
   }
-}
-
-function renderFrame() {
-  if (!gifData) return;
-  
-  const frame = gifData.frames[currentFrameIndex];
-  const canvas = document.getElementById('currentFrame');
-  const ctx = canvas.getContext('2d');
-  
-  // 设置主画布尺寸
-  canvas.width = frame.width;
-  canvas.height = frame.height;
-  
-  // 直接将 ImageData 绘制到主画布
-  ctx.putImageData(frame.imageData, 0, 0);
-  
-  document.getElementById('currentFrameNum').textContent = currentFrameIndex + 1;
-}
-
-function playFrames() {
-  if (playInterval) {
-    clearInterval(playInterval);
-  }
-  
-  playInterval = setInterval(() => {
-    if (!isPlaying) return;
-    
-    if (currentFrameIndex >= gifData.frames.length - 1) {
-      currentFrameIndex = 0;
-    } else {
-      currentFrameIndex++;
-    }
-    
-    renderFrame();
-  }, 100); // 可以根据实际需求调整播放速度
 } 

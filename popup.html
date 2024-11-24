@@ -7,9 +7,6 @@
       width: 300px;
       padding: 10px;
     }
-    #frameControl {
-      display: none;
-    }
     .button {
       margin: 5px;
       padding: 5px 10px;
@@ -22,31 +19,11 @@
     .button:hover {
       background-color: #3367d6;
     }
-    #frameDisplay {
-      margin-top: 10px;
-      text-align: center;
-    }
-    #currentFrame {
-      max-width: 100%;
-      height: auto;
-    }
   </style>
 </head>
 <body>
   <div id="initial">
     <button id="analyze" class="button">分析当前页面 GIF</button>
-  </div>
-  
-  <div id="frameControl">
-    <button id="prev" class="button">上一帧</button>
-    <button id="next" class="button">下一帧</button>
-    <button id="play" class="button">播放</button>
-    <button id="pause" class="button">暂停</button>
-    <div>帧数: <span id="frameCount">0</span></div>
-    <div>当前帧: <span id="currentFrameNum">0</span></div>
-    <div id="frameDisplay">
-      <canvas id="currentFrame"></canvas>
-    </div>
   </div>
   <script src="lib/libgif.js"></script>
   <script src="lib/gif-parser.js"></script>
