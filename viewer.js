@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 在所有初始化完成后，加载 GIF
+  // 简化 GIF 加载逻辑
   const urlParams = new URLSearchParams(window.location.search);
   const gifUrl = urlParams.get('url');
   if (gifUrl) {

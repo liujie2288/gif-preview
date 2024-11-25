@@ -5,8 +5,7 @@
   "permissions": [
     "activeTab",
     "scripting",
-    "contextMenus",
-    "contextMenus.refresh"
+    "contextMenus"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -15,11 +14,11 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html",
     "default_icon": "icons/icon128.png"
   },
   "icons": {
-    "48": "icons/icon48.png"
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "content_scripts": [
     {
