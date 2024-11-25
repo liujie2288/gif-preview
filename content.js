@@ -78,6 +78,9 @@ document.addEventListener('mouseover', async (event) => {
 });
 
 function showGifIcon(imgElement) {
+  // 先移除可能存在的旧图标
+  removeExistingIcon();
+  
   const icon = document.createElement('img');
   icon.src = chrome.runtime.getURL('icons/icon.svg');
   icon.style.position = 'absolute';
@@ -86,11 +89,30 @@ function showGifIcon(imgElement) {
   icon.style.cursor = 'pointer';
   icon.style.zIndex = '1000';
   
-  document.body.appendChild(icon);
+  // 创建一个容器来包裹图标
+  const iconContainer = document.createElement('div');
+  iconContainer.style.position = 'absolute';
+  iconContainer.style.zIndex = '1000';
+  iconContainer.appendChild(icon);
   
+  document.body.appendChild(iconContainer);
+  
+  // 获取图片元素的位置和尺寸
   const rect = imgElement.getBoundingClientRect();
-  icon.style.top = `${rect.top + window.scrollY}px`;
-  icon.style.left = `${rect.left + window.scrollX}px`;
+  
+  // 更新图标位置
+  function updateIconPosition() {
+    const rect = imgElement.getBoundingClientRect();
+    iconContainer.style.top = `${rect.top + window.scrollY}px`;
+    iconContainer.style.left = `${rect.left + window.scrollX}px`;
+  }
+  
+  // 初始化位置
+  updateIconPosition();
+  
+  // 监听滚动事件以更新位置
+  window.addEventListener('scroll', updateIconPosition);
+  window.addEventListener('resize', updateIconPosition);
   
   icon.addEventListener('click', () => {
     const viewerUrl = chrome.runtime.getURL('viewer.html') + 
@@ -98,8 +120,42 @@ function showGifIcon(imgElement) {
     chrome.runtime.sendMessage({ action: 'openViewer', url: viewerUrl });
   });
   
-  imgElement.addEventListener('mouseleave', () => {
-    icon.remove();
+  // 处理鼠标移出事件
+  function handleMouseMove(e) {
+    const iconRect = iconContainer.getBoundingClientRect();
+    const imgRect = imgElement.getBoundingClientRect();
+    
+    // 检查鼠标是否在图片或图标区域内
+    const isOverIcon = e.clientX >= iconRect.left && e.clientX <= iconRect.right &&
+                      e.clientY >= iconRect.top && e.clientY <= iconRect.bottom;
+    const isOverImage = e.clientX >= imgRect.left && e.clientX <= imgRect.right &&
+                       e.clientY >= imgRect.top && e.clientY <= imgRect.bottom;
+    
+    // 如果鼠标既不在图片上也不在图标上，则移除图标
+    if (!isOverIcon && !isOverImage) {
+      removeIcon();
+    }
+  }
+  
+  function removeIcon() {
+    window.removeEventListener('scroll', updateIconPosition);
+    window.removeEventListener('resize', updateIconPosition);
+    window.removeEventListener('mousemove', handleMouseMove);
+    iconContainer.remove();
+  }
+  
+  // 添加全局鼠标移动事件监听
+  window.addEventListener('mousemove', handleMouseMove);
+}
+
+// 辅助函数：移除页面上可能存在的旧图标
+function removeExistingIcon() {
+  const existingIcons = document.querySelectorAll('img[src*="icon.svg"]');
+  existingIcons.forEach(icon => {
+    const container = icon.parentElement;
+    if (container) {
+      container.remove();
+    }
   });
 }
 
