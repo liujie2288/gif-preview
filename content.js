@@ -2,57 +2,16 @@ console.log('Content script loaded');
 
 // 添加检查 GIF 文件头的函数
 async function isGifImage(url) {
-  // 首先尝试使用 fetch
   try {
-    const response = await fetch(url);
-    const buffer = await response.arrayBuffer();
-    return checkGifHeader(buffer);
+    const response = await chrome.runtime.sendMessage({
+      action: 'checkGifHeader',
+      url: url
+    });
+    return response.isGif;
   } catch (error) {
-    console.log('Fetch failed, trying XHR:', error);
-    
-    // 如果 fetch 失败，尝试使用 XMLHttpRequest
-    try {
-      const buffer = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-        xhr.responseType = 'arraybuffer';
-        
-        xhr.onload = function() {
-          if (this.status === 200) {
-            resolve(this.response);
-          } else {
-            reject(new Error(`XHR failed with status ${this.status}`));
-          }
-        };
-        
-        xhr.onerror = function() {
-          reject(new Error('XHR request failed'));
-        };
-        
-        xhr.send();
-      });
-      
-      return checkGifHeader(buffer);
-    } catch (xhrError) {
-      console.error('Both fetch and XHR failed:', xhrError);
-      return false;
-    }
+    console.error('Error checking GIF:', error);
+    return url.toLowerCase().endsWith('.gif') || url.toLowerCase().includes('.gif?');
   }
-}
-
-// 分离检查 GIF 头部的逻辑
-function checkGifHeader(buffer) {
-  const uint8Array = new Uint8Array(buffer);
-  
-  // GIF 文件头标识
-  const gif87a = [0x47, 0x49, 0x46, 0x38, 0x37, 0x61];
-  const gif89a = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61];
-  
-  // 检查前6个字节是否匹配 GIF 文件头
-  const isGif87a = gif87a.every((byte, i) => uint8Array[i] === byte);
-  const isGif89a = gif89a.every((byte, i) => uint8Array[i] === byte);
-  
-  return isGif87a || isGif89a;
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -63,11 +22,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       console.log('Sending GIF URL:', gifUrl);
       sendResponse({ gifUrl });
     });
-    return true; // 保持消息通道开放
+    return true;
+  }
+  
+  if (request.action === 'showNotification') {
+    showNotification(request.message);
   }
 });
 
-// 修改查找 GIF 图片的函数
 async function findGifImages() {
   const images = Array.from(document.getElementsByTagName('img'));
   console.log('Found images:', images.length);
@@ -75,12 +37,10 @@ async function findGifImages() {
   for (const img of images) {
     const src = img.src.toLowerCase();
     
-    // 首先检查文件扩展名
     if (src.endsWith('.gif') || src.includes('.gif?')) {
       return img.src;
     }
     
-    // 如果不是 .gif 扩展名，检查文件内容
     try {
       if (await isGifImage(img.src)) {
         return img.src;
@@ -93,13 +53,12 @@ async function findGifImages() {
   return null;
 }
 
-// 修改鼠标悬停检测逻辑
+// 添加鼠标悬停检测逻辑
 document.addEventListener('mouseover', async (event) => {
   const target = event.target;
   if (target.tagName === 'IMG') {
     const imgSrc = target.src;
     
-    // 检查是否为 GIF
     const isGif = imgSrc.toLowerCase().endsWith('.gif') || 
                   imgSrc.toLowerCase().includes('.gif?') ||
                   await isGifImage(imgSrc);
@@ -111,39 +70,35 @@ document.addEventListener('mouseover', async (event) => {
 });
 
 function showGifIcon(imgElement) {
-  // 先移除可能存在的旧图标
   removeExistingIcon();
   
   const icon = document.createElement('img');
   icon.src = chrome.runtime.getURL('icons/icon.svg');
-  icon.style.position = 'absolute';
-  icon.style.width = '24px';
-  icon.style.height = '24px';
-  icon.style.cursor = 'pointer';
-  icon.style.zIndex = '1000';
+  icon.style.cssText = `
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    z-index: 1000;
+  `;
   
-  // 创建一个容器来包裹图标
   const iconContainer = document.createElement('div');
-  iconContainer.style.position = 'absolute';
-  iconContainer.style.zIndex = '1000';
+  iconContainer.style.cssText = `
+    position: absolute;
+    z-index: 1000;
+  `;
   iconContainer.appendChild(icon);
   
   document.body.appendChild(iconContainer);
   
-  // 获取图片元素的位置和尺寸
-  const rect = imgElement.getBoundingClientRect();
-  
-  // 更新图标位置
   function updateIconPosition() {
     const rect = imgElement.getBoundingClientRect();
     iconContainer.style.top = `${rect.top + window.scrollY}px`;
     iconContainer.style.left = `${rect.left + window.scrollX}px`;
   }
   
-  // 初始化位置
   updateIconPosition();
   
-  // 监听滚动事件以更新位置
   window.addEventListener('scroll', updateIconPosition);
   window.addEventListener('resize', updateIconPosition);
   
@@ -153,18 +108,15 @@ function showGifIcon(imgElement) {
     chrome.runtime.sendMessage({ action: 'openViewer', url: viewerUrl });
   });
   
-  // 处理鼠标移出事件
   function handleMouseMove(e) {
     const iconRect = iconContainer.getBoundingClientRect();
     const imgRect = imgElement.getBoundingClientRect();
     
-    // 检查鼠标是否在图片或图标区域内
     const isOverIcon = e.clientX >= iconRect.left && e.clientX <= iconRect.right &&
                       e.clientY >= iconRect.top && e.clientY <= iconRect.bottom;
     const isOverImage = e.clientX >= imgRect.left && e.clientX <= imgRect.right &&
                        e.clientY >= imgRect.top && e.clientY <= imgRect.bottom;
     
-    // 如果鼠标既不在图片上也不在图标上，则移除图标
     if (!isOverIcon && !isOverImage) {
       removeIcon();
     }
@@ -177,11 +129,9 @@ function showGifIcon(imgElement) {
     iconContainer.remove();
   }
   
-  // 添加全局鼠标移动事件监听
   window.addEventListener('mousemove', handleMouseMove);
 }
 
-// 辅助函数：移除页面上可能存在的旧图标
 function removeExistingIcon() {
   const existingIcons = document.querySelectorAll('img[src*="icon.svg"]');
   existingIcons.forEach(icon => {
@@ -192,14 +142,6 @@ function removeExistingIcon() {
   });
 }
 
-// 在现有代码中添加消息监听器
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'showNotification') {
-    showNotification(message.message);
-  }
-});
-
-// 添加显示提示的函数
 function showNotification(message) {
   const notification = document.createElement('div');
   notification.style.cssText = `
@@ -221,7 +163,6 @@ function showNotification(message) {
   
   document.body.appendChild(notification);
   
-  // 3秒后自动移除提示
   setTimeout(() => {
     notification.style.opacity = '0';
     notification.style.transition = 'opacity 0.3s ease';
